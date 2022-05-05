@@ -4,6 +4,7 @@ This script is used to generate README.md based on library.json
 Please do not edit directly README.md, but modify entries in library.json and then re-generate README.md by running `$ python generate.py`
 """
 
+
 import json
 
 page = ""
@@ -46,36 +47,28 @@ tags_counter = {}
 format_counter = {}
 
 for title, entry in lib_json.iteritems():
-    formats_set = formats_set | set([ entry["format"] ])
+    formats_set = formats_set | {entry["format"]}
     tags_set = tags_set | set( entry["tags"] ) if entry["tags"] != [] else tags_set
 
     for cat in entry["categories"]:
-        categories_set = categories_set | set( [cat] )
+        categories_set = categories_set | {cat}
 
-        if cat not in categories_dict.keys():
-            categories_dict[cat] = { title : entry }
-        else:
+        if cat in categories_dict:
             categories_dict[cat][title] = entry
-    
-    for tag in entry["tags"]:
-        if tag not in tags_counter.keys():
-            tags_counter[tag] = 1
+
         else:
-            tags_counter[tag] = tags_counter[tag] + 1
-    
-    if entry["format"] not in format_counter.keys():
-        format_counter[ entry["format"] ] = 1
-    else:
+            categories_dict[cat] = { title : entry }
+    for tag in entry["tags"]:
+        tags_counter[tag] = tags_counter[tag] + 1 if tag in tags_counter else 1
+    if entry["format"] in format_counter:
         format_counter[ entry["format"] ] = format_counter[ entry["format"] ] + 1
 
-formats_list = list(formats_set)
-formats_list.sort()
-tags_list = list(tags_set)
-tags_list.sort()
+    else:
+        format_counter[ entry["format"] ] = 1
+formats_list = sorted(formats_set)
+tags_list = sorted(tags_set)
 tags_list = tags_list
-categories_list = list(categories_set)
-categories_list.sort()
-
+categories_list = sorted(categories_set)
 page_intro = page_intro.format( total_entries=len( lib_json.keys() ), total_categories=len( categories_list ) )
 
 #print json.dumps(categories_dict, indent=2)
@@ -92,7 +85,7 @@ page_tags = "### Tags\n"
 for tag in tags_list:
     tag_orig = tag
     if tag in tags_links:
-        tag = "[{}]({})".format(tag, tags_links[tag])
+        tag = f"[{tag}]({tags_links[tag]})"
     page_tags = page_tags + "* {} ({})\n".format(tag, tags_counter[tag_orig])
 
 # generate categories section
@@ -104,7 +97,7 @@ for cat in categories_list:
     link = str(cat.lower())
     link = ''.join(filter(filter_links, link))
     link = link.replace(" ", "-")
-    
+
     page_categories = page_categories + "* [{}](#{}) ({})\n".format(cat, link, len( categories_dict[cat].keys() ) )
 
 # generate entries section
@@ -118,10 +111,10 @@ for cat, entries in sorted(categories_dict.iteritems()):
         tags.sort()
         tags_str = ""
         for tag in tags:
-            tags_str = tags_str + " `{}`".format(tag)
-        
+            tags_str = tags_str + f" `{tag}`"
+
         if data.has_key("extra"):
-            tags_str = tags_str + " " + data["extra"]
+            tags_str = f"{tags_str} " + data["extra"]
 
         entry = "\n* [{}]({}) **{}**{}".format( title.encode('utf-8'), data["link"], data["format"], tags_str )
         page_entries = page_entries + entry
@@ -132,8 +125,19 @@ page_contributing = """### Contributing
 Feel free to contribute to this project by creating pull requests or by [buying me a beer :)](https://www.paypal.me/jtomori)
 """
 
-page = "\n<br>\n\n".join( [page_intro, page_format, page_tags, page_categories, page_entries, page_contributing] )
-page = page + "\n"
+page = (
+    "\n<br>\n\n".join(
+        [
+            page_intro,
+            page_format,
+            page_tags,
+            page_categories,
+            page_entries,
+            page_contributing,
+        ]
+    )
+    + "\n"
+)
 
 with open("README.md", "w") as out_file:
     out_file.write(page) 
